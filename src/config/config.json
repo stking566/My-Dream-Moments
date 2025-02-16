@@ -16,7 +16,7 @@
             "title": "大语言模型配置",
             "settings": {
                 "api_key": {
-                    "value": "",
+                    "value": "sk-",
                     "type": "string",
                     "description": "DeepSeek API密钥",
                     "is_secret": true
@@ -27,7 +27,7 @@
                     "description": "DeepSeek API基础URL"
                 },
                 "model": {
-                    "value": "deepseek-ai/DeepSeek-V3",
+                    "value": "Pro/deepseek-ai/DeepSeek-V3",
                     "type": "string",
                     "description": "使用的AI模型名称",
                     "options": [
@@ -140,7 +140,7 @@
                         "description": "最大上下文轮数"
                     },
                     "avatar_dir": {
-                        "value": "data/avatars/MONO",
+                        "value": "data/avatars/ATRI/",
                         "type": "string",
                         "description": "人设目录（自动包含 avatar.md 和 emojis 目录）"
                     }

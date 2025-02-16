@@ -8,7 +8,7 @@ import time
 import os
 import shutil
 from services.database import Session, ChatMessage
-from config import config
+from config import config, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, MODEL, MAX_TOKEN, TEMPERATURE, MAX_GROUPS
 from wxauto import WeChat
 import re
 import pyautogui
@@ -18,6 +18,7 @@ from handlers.message import MessageHandler
 from handlers.voice import VoiceHandler
 from services.ai.moonshot import MoonShotAI
 from services.ai.deepseek import DeepSeekAI
+from src.handlers.memory import MemoryHandler
 from utils.cleanup import cleanup_pycache, CleanupUtils
 from utils.logger import LoggerConfig
 from colorama import init, Fore, Style
@@ -193,6 +194,16 @@ moonshot_ai = MoonShotAI(
     temperature=config.media.image_recognition.temperature
 )
 
+memory_handler = MemoryHandler(
+    root_dir=root_dir,
+    api_key=DEEPSEEK_API_KEY,
+    base_url=DEEPSEEK_BASE_URL,
+    model=MODEL,                # 从config.py获取
+    max_token=MAX_TOKEN,        # 从config.py获取
+    temperature=TEMPERATURE,    # 从config.py获取
+    max_groups=MAX_GROUPS       # 从config.py获取
+)
+
 # 获取机器人名称
 wx = WeChat()
 ROBOT_WX_NAME = wx.A_MyIcon.Name
@@ -210,7 +221,8 @@ message_handler = MessageHandler(
     prompt_content=prompt_content,
     image_handler=image_handler,
     emoji_handler=emoji_handler,
-    voice_handler=voice_handler
+    voice_handler=voice_handler,
+    memory_handler=memory_handler
 )
 chat_bot = ChatBot(message_handler, moonshot_ai)
 
@@ -469,7 +481,33 @@ def main():
             print_status("微信初始化失败，请确保微信已登录并保持在前台运行!", "error", "❌")
             return
         print_status("微信监听初始化完成", "success", "✅")
+        print_status("检查短期记忆...", "info", "🔍")
 
+        memory_handler.summarize_memories()  # 启动时处理残留记忆
+
+        def memory_maintenance():
+            while True:
+                try:
+                    memory_handler.summarize_memories()
+                    time.sleep(3600)  # 每小时检查一次
+                except Exception as e:
+                    logger.error(f"记忆维护失败: {str(e)}")
+
+        print_status("启动记忆维护线程...", "info", "🧠")
+        memory_thread = threading.Thread(target=memory_maintenance)
+        memory_thread.daemon = True
+        memory_thread.start()
+        print_status("验证记忆存储路径...", "info", "📁")
+        memory_dir = os.path.join(root_dir, "data", "memory")
+        if not os.path.exists(memory_dir):
+            os.makedirs(memory_dir)
+            print_status(f"创建记忆目录: {memory_dir}", "success", "✅")
+
+        atri_path = os.path.join(root_dir, "data", "avatars", "ATRI", " avatar.md")
+        if not os.path.exists(atri_path):
+            with open(atri_path, "w", encoding="utf-8") as f:
+                f.write("# 核心人格\n[默认内容]")
+            print_status(f"创建ATRI提示文件", "warning", "⚠️")
         # 启动消息监听线程
         print_status("启动消息监听线程...", "info", "📡")
         listener_thread = threading.Thread(target=message_listener)
